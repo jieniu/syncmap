@@ -1,8 +1,6 @@
 package syncmap
 
 import (
-	"sort"
-	"strconv"
 	"testing"
 )
 
@@ -33,8 +31,8 @@ func Test_New(t *testing.T) {
 
 func Test_Set(t *testing.T) {
 	m := New()
-	m.Set("one", 1)
-	m.Set("tow", 2)
+	m.Set(1, 1)
+	m.Set(2, 2)
 	if m.Size() != 2 {
 		t.Error("map should have 2 items.")
 	}
@@ -42,7 +40,7 @@ func Test_Set(t *testing.T) {
 
 func Test_Get(t *testing.T) {
 	m := New()
-	v1, ok := m.Get("not_exist_at_all")
+	v1, ok := m.Get(7788414)
 	if ok {
 		t.Error("ok should be false when key is missing")
 	}
@@ -50,9 +48,9 @@ func Test_Get(t *testing.T) {
 		t.Error("value should be nil for missing key")
 	}
 
-	m.Set("one", 1)
+	m.Set(1, 1)
 
-	v2, ok := m.Get("one")
+	v2, ok := m.Get(1)
 	if !ok {
 		t.Error("ok should be true when key exists")
 	}
@@ -63,21 +61,21 @@ func Test_Get(t *testing.T) {
 
 func Test_Has(t *testing.T) {
 	m := New()
-	if m.Has("missing_key") {
+	if m.Has(1) {
 		t.Error("Has should return False for missing key")
 	}
 
-	m.Set("one", 1)
-	if !m.Has("one") {
+	m.Set(1, 1)
+	if !m.Has(1) {
 		t.Error("Has should return True for existing key")
 	}
 }
 
 func Test_Delete(t *testing.T) {
 	m := New()
-	m.Set("one", 1)
-	m.Delete("one")
-	if m.Has("one") {
+	m.Set(1, 1)
+	m.Delete(1)
+	if m.Has(1) {
 		t.Error("Delete shoudl remove the given key from map")
 	}
 }
@@ -85,7 +83,7 @@ func Test_Delete(t *testing.T) {
 func Test_Size(t *testing.T) {
 	m := New()
 	for i := 0; i < 42; i++ {
-		m.Set(strconv.Itoa(i), i)
+		m.Set(uint32(i), i)
 	}
 	if m.Size() != 42 {
 		t.Error("Size doesn't return the right number of items")
@@ -96,7 +94,7 @@ func Test_Flush(t *testing.T) {
 	var shardCount uint8 = 64
 	m := NewWithShard(shardCount)
 	for i := 0; i < 42; i++ {
-		m.Set(strconv.Itoa(i), i)
+		m.Set(uint32(i), i)
 	}
 	count := m.Flush()
 	if count != 42 {
@@ -110,13 +108,14 @@ func Test_Flush(t *testing.T) {
 	}
 }
 
+/*
 func Test_IterKeys(t *testing.T) {
 	loop := 100
-	expectedKeys := make([]string, loop)
+	expectedKeys := make([]uint32, loop)
 
 	m := New()
 	for i := 0; i < loop; i++ {
-		key := strconv.Itoa(i)
+		key := uint32(i)
 		expectedKeys[i] = key
 		m.Set(key, i)
 	}
@@ -139,15 +138,16 @@ func Test_IterKeys(t *testing.T) {
 		}
 	}
 }
+*/
 
 func Test_Pop(t *testing.T) {
 	m := New()
 	// m.Pop()
 
-	m.Set("one", 1)
+	m.Set(1, 1)
 
 	k, v := m.Pop()
-	if k != "one" && v.(int) != 1 {
+	if k != 1 && v.(int) != 1 {
 		t.Error("Pop should returns the only item")
 	}
 	if m.Size() != 0 {

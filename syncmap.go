@@ -2,6 +2,7 @@
 package syncmap
 
 import (
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -13,7 +14,7 @@ const (
 
 // syncMap wraps built-in map by using RWMutex for concurrent safe.
 type syncMap struct {
-	items map[string]interface{}
+	items map[uint32]interface{}
 	sync.RWMutex
 }
 
@@ -39,18 +40,19 @@ func NewWithShard(shardCount uint8) *SyncMap {
 	m.shardCount = shardCount
 	m.shards = make([]*syncMap, m.shardCount)
 	for i, _ := range m.shards {
-		m.shards[i] = &syncMap{items: make(map[string]interface{})}
+		m.shards[i] = &syncMap{items: make(map[uint32]interface{})}
 	}
 	return m
 }
 
 // Find the specific shard with the given key
-func (m *SyncMap) locate(key string) *syncMap {
-	return m.shards[bkdrHash(key)&uint32((m.shardCount-1))]
+func (m *SyncMap) locate(key uint32) *syncMap {
+	strkey := fmt.Sprintf("%d", key)
+	return m.shards[bkdrHash(strkey)&uint32((m.shardCount-1))]
 }
 
 // Retrieves a value
-func (m *SyncMap) Get(key string) (value interface{}, ok bool) {
+func (m *SyncMap) Get(key uint32) (value interface{}, ok bool) {
 	shard := m.locate(key)
 	shard.RLock()
 	value, ok = shard.items[key]
@@ -59,7 +61,7 @@ func (m *SyncMap) Get(key string) (value interface{}, ok bool) {
 }
 
 // Sets value with the given key
-func (m *SyncMap) Set(key string, value interface{}) {
+func (m *SyncMap) Set(key uint32, value interface{}) {
 	shard := m.locate(key)
 	shard.Lock()
 	shard.items[key] = value
@@ -67,7 +69,7 @@ func (m *SyncMap) Set(key string, value interface{}) {
 }
 
 // Removes an item
-func (m *SyncMap) Delete(key string) {
+func (m *SyncMap) Delete(key uint32) {
 	shard := m.locate(key)
 	shard.Lock()
 	delete(shard.items, key)
@@ -75,13 +77,13 @@ func (m *SyncMap) Delete(key string) {
 }
 
 // Pop delete and return a random item in the cache
-func (m *SyncMap) Pop() (string, interface{}) {
+func (m *SyncMap) Pop() (uint32, interface{}) {
 	if m.Size() == 0 {
 		panic("syncmap: map is empty")
 	}
 
 	var (
-		key   string
+		key   uint32
 		value interface{}
 		found = false
 		n     = int(m.shardCount)
@@ -105,7 +107,7 @@ func (m *SyncMap) Pop() (string, interface{}) {
 }
 
 // Whether SyncMap has the given key
-func (m *SyncMap) Has(key string) bool {
+func (m *SyncMap) Has(key uint32) bool {
 	_, ok := m.Get(key)
 	return ok
 }
@@ -127,15 +129,15 @@ func (m *SyncMap) Flush() int {
 	for _, shard := range m.shards {
 		shard.Lock()
 		size += len(shard.items)
-		shard.items = make(map[string]interface{})
+		shard.items = make(map[uint32]interface{})
 		shard.Unlock()
 	}
 	return size
 }
 
 // Returns a channel from which each key in the map can be read
-func (m *SyncMap) IterKeys() <-chan string {
-	ch := make(chan string)
+func (m *SyncMap) IterKeys() <-chan uint32 {
+	ch := make(chan uint32)
 	go func() {
 		for _, shard := range m.shards {
 			shard.RLock()
@@ -151,7 +153,7 @@ func (m *SyncMap) IterKeys() <-chan string {
 
 // Item is a pair of key and value
 type Item struct {
-	Key   string
+	Key   uint32
 	Value interface{}
 }
 
